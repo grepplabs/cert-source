@@ -15,7 +15,7 @@ func GetServerTLSConfig(logger *slog.Logger, conf *config.TLSServerConfig, opts 
 		filesource.WithLogger(logger),
 		filesource.WithX509KeyPair(conf.File.Cert, conf.File.Key),
 		filesource.WithClientAuthFile(conf.File.ClientCAs),
-		filesource.WithClientCRLFile(conf.File.ClientCLR),
+		filesource.WithClientCRLFile(conf.File.ClientCRL),
 		filesource.WithRefresh(conf.Refresh),
 	)
 	if err != nil {

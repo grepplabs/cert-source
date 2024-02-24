@@ -22,7 +22,7 @@ func TestGetServerTLSConfig(t *testing.T) {
 			Key:       bundle.ServerKey.Name(),
 			Cert:      bundle.ServerCert.Name(),
 			ClientCAs: bundle.CACert.Name(),
-			ClientCLR: bundle.ClientCRL.Name(),
+			ClientCRL: bundle.ClientCRL.Name(),
 		},
 	}, tlsserver.WithTLSServerNextProtos([]string{"h2"}))
 	require.NoError(t, err)

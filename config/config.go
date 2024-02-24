@@ -14,7 +14,7 @@ type TLSServerFiles struct {
 	Key       string `placeholder:"FILE" help:"Path to the server TLS key file."`
 	Cert      string `placeholder:"FILE" help:"Path to the server TLS certificate file."`
 	ClientCAs string `placeholder:"FILE" name:"client-ca" help:"Optional path to server client CA file for client verification."`
-	ClientCLR string `placeholder:"FILE" name:"client-clr" help:"TLS X509 CLR signed be the client CA. If no revocation list is specified, only client CA is verified."`
+	ClientCRL string `placeholder:"FILE" name:"client-crl" help:"TLS X509 CRL signed be the client CA. If no revocation list is specified, only client CA is verified."`
 }
 
 type TLSClientConfig struct {

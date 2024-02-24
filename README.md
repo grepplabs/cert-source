@@ -41,7 +41,7 @@ func main() {
 			Key:       "key.pem",
 			Cert:      "cert.pem",
 			ClientCAs: "",
-			ClientCLR: "",
+			ClientCRL: "",
 		},
 	})
 	if err != nil {

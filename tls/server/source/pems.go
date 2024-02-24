@@ -79,7 +79,7 @@ func (s ServerPEMs) ValidateCRLs() error {
 			}
 		}
 		if !ok {
-			return errors.New("server PEMs: CLR validation failure")
+			return errors.New("server PEMs: CRL validation failure")
 		}
 	}
 	return nil
