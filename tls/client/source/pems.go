@@ -39,7 +39,10 @@ func (s ClientPEMs) RootCAs() (*x509.CertPool, error) {
 	if len(s.RootCAsPEMBlock) == 0 {
 		return nil, nil
 	}
-	certPool := x509.NewCertPool()
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		certPool = x509.NewCertPool()
+	}
 	if !certPool.AppendCertsFromPEM(s.RootCAsPEMBlock) {
 		return nil, errors.New("client PEMs: building client CAs failed")
 	}

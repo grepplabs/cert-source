@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/grepplabs/cert-source/tls/keyutil"
 	tlscert "github.com/grepplabs/cert-source/tls/server/source"
 	"github.com/grepplabs/cert-source/tls/watcher"
 )
@@ -20,6 +21,7 @@ const (
 type fileSource struct {
 	certFile        string
 	keyFile         string
+	keyPassword     string
 	clientAuthFile  string
 	clientCRLFile   string
 	refresh         time.Duration
@@ -127,6 +129,9 @@ func (s *fileSource) Load() (pemBlocks *tlscert.ServerPEMs, err error) {
 		return nil, err
 	}
 	if pemBlocks.KeyPEMBlock, err = s.readFile(s.keyFile); err != nil {
+		return nil, err
+	}
+	if pemBlocks.KeyPEMBlock, err = keyutil.DecryptPrivateKeyPEM(pemBlocks.KeyPEMBlock, s.keyPassword); err != nil {
 		return nil, err
 	}
 	if pemBlocks.ClientAuthPEMBlock, err = s.readFile(s.clientAuthFile); err != nil {

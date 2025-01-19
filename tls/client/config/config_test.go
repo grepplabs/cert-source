@@ -31,3 +31,37 @@ func TestGetClientTLSConfig(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, clientCert)
 }
+
+func TestGetClientTLSConfigNoConfig(t *testing.T) {
+	bundle := testutil.NewCertsBundle()
+	defer bundle.Close()
+	tlsConfigFunc, err := GetTLSClientConfigFunc(slog.Default(), &config.TLSClientConfig{
+		Enable:  true,
+		Refresh: 0,
+		File:    config.TLSClientFiles{},
+	})
+	require.NoError(t, err)
+	tlsConfig := tlsConfigFunc()
+	require.Nil(t, tlsConfig.RootCAs)
+	require.Nil(t, tlsConfig.GetClientCertificate)
+}
+
+func TestGetClientTLSConfigSkipVerify(t *testing.T) {
+	bundle := testutil.NewCertsBundle()
+	defer bundle.Close()
+	tlsConfigFunc, err := GetTLSClientConfigFunc(slog.Default(), &config.TLSClientConfig{
+		Enable:  true,
+		Refresh: 0,
+		File: config.TLSClientFiles{
+			Key:  bundle.ClientKey.Name(),
+			Cert: bundle.ClientCert.Name(),
+		},
+	})
+	require.NoError(t, err)
+	tlsConfig := tlsConfigFunc()
+	require.Nil(t, tlsConfig.RootCAs)
+
+	clientCert, err := tlsConfig.GetClientCertificate(nil)
+	require.NoError(t, err)
+	require.NotNil(t, clientCert)
+}

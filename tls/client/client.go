@@ -20,14 +20,22 @@ func NewTLSClientConfigFunc(logger *slog.Logger, src source.ClientCertsSource, o
 	if err != nil {
 		return nil, err
 	}
+	var getClientCertificateFunc func(info *tls.CertificateRequestInfo) (*tls.Certificate, error)
+	if store.LoadClientCerts().Certificate != nil {
+		// Set function only when client certificate is available.
+		// TLS 1.3 checks if GetClientCertificate function is nil, if it is not nil,
+		// it assumes client certificate is available which call cause the panic if nil is returned.
+		// nolint:unparam
+		getClientCertificateFunc = func(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			return store.LoadClientCerts().Certificate, nil
+		}
+	}
 	return func() *tls.Config {
 		cs := store.LoadClientCerts()
 		x := &tls.Config{
-			RootCAs:            cs.RootCAs,
-			InsecureSkipVerify: cs.InsecureSkipVerify,
-			GetClientCertificate: func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-				return store.LoadClientCerts().Certificate, nil
-			},
+			RootCAs:              cs.RootCAs,
+			InsecureSkipVerify:   cs.InsecureSkipVerify,
+			GetClientCertificate: getClientCertificateFunc,
 		}
 		for _, opt := range opts {
 			opt(x)

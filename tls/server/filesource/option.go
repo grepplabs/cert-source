@@ -20,6 +20,12 @@ func WithX509KeyPair(certFile, keyFile string) Option {
 	}
 }
 
+func WithKeyPassword(keyPassword string) Option {
+	return func(c *fileSource) {
+		c.keyPassword = keyPassword
+	}
+}
+
 func WithClientAuthFile(clientAuthFile string) Option {
 	return func(c *fileSource) {
 		c.clientAuthFile = clientAuthFile

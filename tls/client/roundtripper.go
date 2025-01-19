@@ -35,7 +35,10 @@ func WithClientCertsStore(source *source.ClientCertsStore) RoundTripperOption {
 }
 
 func WithRootCA(cert *x509.Certificate) RoundTripperOption {
-	certPool := x509.NewCertPool()
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		certPool = x509.NewCertPool()
+	}
 	certPool.AddCert(cert)
 	return WithRootCAs(certPool)
 }

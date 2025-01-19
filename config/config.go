@@ -5,9 +5,10 @@ import (
 )
 
 type TLSServerConfig struct {
-	Enable  bool           `help:"Enable server-side TLS."`
-	Refresh time.Duration  `default:"0s" help:"Interval for refreshing server TLS certificates."`
-	File    TLSServerFiles `embed:"" prefix:"file."`
+	Enable      bool           `help:"Enable server-side TLS."`
+	Refresh     time.Duration  `default:"0s" help:"Interval for refreshing server TLS certificates."`
+	File        TLSServerFiles `embed:"" prefix:"file."`
+	KeyPassword string         `help:"Optional password to decrypt RSA private key."`
 }
 
 type TLSServerFiles struct {
@@ -22,6 +23,7 @@ type TLSClientConfig struct {
 	Refresh            time.Duration  `default:"0s" help:"Interval for refreshing client TLS certificates."`
 	InsecureSkipVerify bool           `help:"Skip TLS verification on client side."`
 	File               TLSClientFiles `embed:"" prefix:"file."`
+	KeyPassword        string         `help:"Optional password to decrypt RSA private key."`
 }
 
 type TLSClientFiles struct {

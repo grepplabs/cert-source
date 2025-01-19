@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tlscert "github.com/grepplabs/cert-source/tls/client/source"
+	"github.com/grepplabs/cert-source/tls/keyutil"
 	"github.com/grepplabs/cert-source/tls/watcher"
 )
 
@@ -15,6 +16,7 @@ type fileSource struct {
 	insecureSkipVerify bool
 	certFile           string
 	keyFile            string
+	keyPassword        string
 	rootCAsFile        string
 	refresh            time.Duration
 	logger             *slog.Logger
@@ -103,6 +105,9 @@ func (s *fileSource) Load() (pemBlocks *tlscert.ClientPEMs, err error) {
 			return nil, err
 		}
 		if pemBlocks.KeyPEMBlock, err = s.readFile(s.keyFile); err != nil {
+			return nil, err
+		}
+		if pemBlocks.KeyPEMBlock, err = keyutil.DecryptPrivateKeyPEM(pemBlocks.KeyPEMBlock, s.keyPassword); err != nil {
 			return nil, err
 		}
 	}

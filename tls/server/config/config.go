@@ -17,6 +17,7 @@ func GetServerTLSConfig(logger *slog.Logger, conf *config.TLSServerConfig, opts 
 		filesource.WithClientAuthFile(conf.File.ClientCAs),
 		filesource.WithClientCRLFile(conf.File.ClientCRL),
 		filesource.WithRefresh(conf.Refresh),
+		filesource.WithKeyPassword(conf.KeyPassword),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("setup server cert file source: %w", err)

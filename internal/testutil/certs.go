@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -9,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -18,7 +20,10 @@ import (
 	"time"
 
 	tlsclient "github.com/grepplabs/cert-source/tls/client"
+	"github.com/grepplabs/cert-source/tls/keyutil"
 )
+
+const DefaultKeyPassword = "test123"
 
 func GenerateCRL(caX509Cert *x509.Certificate, caPrivateKey crypto.PrivateKey, certs []*x509.Certificate, crlFile *os.File) error {
 	revoked := make([]x509.RevocationListEntry, 0)
@@ -193,16 +198,20 @@ type CertsBundle struct {
 	CATLSCert  *tls.Certificate
 	CAX509Cert *x509.Certificate
 
-	ServerCert     *os.File
-	ServerKey      *os.File
-	ServerTLSCert  *tls.Certificate
-	ServerX509Cert *x509.Certificate
+	ServerCert         *os.File
+	ServerKey          *os.File
+	ServerKeyPassword  string
+	ServerKeyEncrypted *os.File
+	ServerTLSCert      *tls.Certificate
+	ServerX509Cert     *x509.Certificate
 
-	ClientCert     *os.File
-	ClientKey      *os.File
-	ClientCRL      *os.File
-	ClientTLSCert  *tls.Certificate
-	ClientX509Cert *x509.Certificate
+	ClientCert         *os.File
+	ClientKey          *os.File
+	ClientKeyPassword  string
+	ClientKeyEncrypted *os.File
+	ClientCRL          *os.File
+	ClientTLSCert      *tls.Certificate
+	ClientX509Cert     *x509.Certificate
 }
 
 func (bundle *CertsBundle) Close() {
@@ -210,8 +219,10 @@ func (bundle *CertsBundle) Close() {
 	_ = os.Remove(bundle.CAKey.Name())
 	_ = os.Remove(bundle.ServerCert.Name())
 	_ = os.Remove(bundle.ServerKey.Name())
+	_ = os.Remove(bundle.ServerKeyEncrypted.Name())
 	_ = os.Remove(bundle.ClientCert.Name())
 	_ = os.Remove(bundle.ClientKey.Name())
+	_ = os.Remove(bundle.ClientKeyEncrypted.Name())
 	_ = os.Remove(bundle.dirName)
 }
 
@@ -257,6 +268,12 @@ func NewCertsBundle() *CertsBundle {
 	}
 	defer closeFile(bundle.ServerKey)
 
+	bundle.ServerKeyEncrypted, err = os.CreateTemp(dirName, "server-key-encrypted-")
+	if err != nil {
+		panic(err)
+	}
+	defer closeFile(bundle.ServerKeyEncrypted)
+
 	bundle.ClientCert, err = os.CreateTemp(dirName, "client-cert-")
 	if err != nil {
 		panic(err)
@@ -268,6 +285,12 @@ func NewCertsBundle() *CertsBundle {
 		panic(err)
 	}
 	defer closeFile(bundle.ClientKey)
+
+	bundle.ClientKeyEncrypted, err = os.CreateTemp("", "client-key-encrypted-")
+	if err != nil {
+		panic(err)
+	}
+	defer closeFile(bundle.ClientKeyEncrypted)
 
 	bundle.ClientCRL, err = os.CreateTemp("", "client-crl-")
 	if err != nil {
@@ -284,10 +307,20 @@ func NewCertsBundle() *CertsBundle {
 	if err != nil {
 		panic(err)
 	}
+	if bundle.ServerKeyPassword == "" {
+		bundle.ServerKeyPassword = DefaultKeyPassword
+	}
+	writeEncryptedPrivate(bundle.ServerKey.Name(), bundle.ServerKeyEncrypted, bundle.ServerKeyPassword)
+
 	bundle.ClientTLSCert, bundle.ClientX509Cert, err = GenerateCert(bundle.CATLSCert, true, bundle.ClientCert, bundle.ClientKey)
 	if err != nil {
 		panic(err)
 	}
+	if bundle.ClientKeyPassword == "" {
+		bundle.ClientKeyPassword = DefaultKeyPassword
+	}
+	writeEncryptedPrivate(bundle.ClientKey.Name(), bundle.ClientKeyEncrypted, bundle.ClientKeyPassword)
+
 	// generate CRLs
 	err = GenerateCRL(bundle.CAX509Cert, bundle.CATLSCert.PrivateKey, []*x509.Certificate{}, bundle.CAEmptyCRL)
 	if err != nil {
@@ -298,6 +331,22 @@ func NewCertsBundle() *CertsBundle {
 		panic(err)
 	}
 	return bundle
+}
+
+func writeEncryptedPrivate(keyFilename string, encryptedFile *os.File, password string) {
+	keyData, err := os.ReadFile(keyFilename)
+	if err != nil {
+		panic(err)
+	}
+	encryptedKey, err := keyutil.EncryptPKCS8PrivateKeyPEM(keyData, password)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = io.Copy(encryptedFile, bytes.NewReader(encryptedKey))
+	if err != nil {
+		panic(err)
+	}
 }
 
 func closeFile(file *os.File) {

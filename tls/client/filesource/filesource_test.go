@@ -82,3 +82,44 @@ func TestCertRotation(t *testing.T) {
 	require.Contains(t, err.Error(), "unknown certificate authority")
 
 }
+
+func TestKeyEncryption(t *testing.T) {
+	bundle := testutil.NewCertsBundle()
+	defer bundle.Close()
+
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	clientSource := MustNew(
+		WithClientRootCAs(bundle.CACert.Name()),
+		WithClientCert(bundle.ClientCert.Name(), bundle.ClientKeyEncrypted.Name()),
+		WithKeyPassword(bundle.ClientKeyPassword),
+		WithRefresh(1*time.Second),
+	).(*fileSource)
+
+	clientCertsStore, err := tlsclient.NewTLSClientCertsStore(slog.Default(), clientSource)
+	require.NoError(t, err)
+
+	serverSource := serverfilesource.MustNew(
+		serverfilesource.WithX509KeyPair(bundle.ServerCert.Name(), bundle.ServerKeyEncrypted.Name()),
+		serverfilesource.WithKeyPassword(bundle.ServerKeyPassword),
+		serverfilesource.WithClientAuthFile(bundle.CACert.Name()),
+		serverfilesource.WithClientCRLFile(bundle.CAEmptyCRL.Name()),
+		serverfilesource.WithRefresh(1*time.Second),
+	)
+	ts.TLS = servertls.MustNewServerConfig(slog.Default(), serverSource)
+	ts.StartTLS()
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	require.NoError(t, err)
+
+	// when
+	client := &http.Client{
+		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientCertsStore(clientCertsStore)),
+	}
+	_, err = client.Do(req)
+	require.NoError(t, err)
+
+}
