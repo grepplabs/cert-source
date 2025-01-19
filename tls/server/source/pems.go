@@ -40,7 +40,10 @@ func (s ServerPEMs) ClientCAs() (*x509.CertPool, error) {
 	if len(s.ClientAuthPEMBlock) == 0 {
 		return nil, nil
 	}
-	certPool := x509.NewCertPool()
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		certPool = x509.NewCertPool()
+	}
 	if !certPool.AppendCertsFromPEM(s.ClientAuthPEMBlock) {
 		return nil, errors.New("server PEMs: building client CAs failed")
 	}
