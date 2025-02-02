@@ -2,6 +2,7 @@ package filesource
 
 import (
 	"errors"
+	"github.com/grepplabs/cert-source/tls/keyutil"
 	"log/slog"
 	"os"
 	"sync/atomic"
@@ -15,6 +16,7 @@ type fileSource struct {
 	insecureSkipVerify bool
 	certFile           string
 	keyFile            string
+	keyPassword        string
 	rootCAsFile        string
 	refresh            time.Duration
 	logger             *slog.Logger
@@ -103,6 +105,9 @@ func (s *fileSource) Load() (pemBlocks *tlscert.ClientPEMs, err error) {
 			return nil, err
 		}
 		if pemBlocks.KeyPEMBlock, err = s.readFile(s.keyFile); err != nil {
+			return nil, err
+		}
+		if pemBlocks.KeyPEMBlock, err = keyutil.DecryptPrivateKeyPEM(pemBlocks.KeyPEMBlock, s.keyPassword); err != nil {
 			return nil, err
 		}
 	}
