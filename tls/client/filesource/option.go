@@ -20,6 +20,12 @@ func WithClientCert(certFile, keyFile string) Option {
 	}
 }
 
+func WithKeyPassword(keyPassword string) Option {
+	return func(c *fileSource) {
+		c.keyPassword = keyPassword
+	}
+}
+
 func WithClientRootCAs(rootCAsFile string) Option {
 	return func(c *fileSource) {
 		c.rootCAsFile = rootCAsFile
