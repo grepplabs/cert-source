@@ -15,6 +15,7 @@ type ClientPEMs struct {
 	CertPEMBlock    []byte
 	KeyPEMBlock     []byte
 	RootCAsPEMBlock []byte
+	UseSystemPool   bool
 }
 
 func (s ClientPEMs) Checksum() []byte {
@@ -39,12 +40,19 @@ func (s ClientPEMs) RootCAs() (*x509.CertPool, error) {
 	if len(s.RootCAsPEMBlock) == 0 {
 		return nil, nil
 	}
-	certPool, err := x509.SystemCertPool()
-	if err != nil {
-		certPool = x509.NewCertPool()
-	}
+	certPool := s.newCertPool()
 	if !certPool.AppendCertsFromPEM(s.RootCAsPEMBlock) {
 		return nil, errors.New("client PEMs: building client CAs failed")
 	}
 	return certPool, nil
+}
+
+func (s ClientPEMs) newCertPool() *x509.CertPool {
+	if s.UseSystemPool {
+		certPool, err := x509.SystemCertPool()
+		if err == nil {
+			return certPool
+		}
+	}
+	return x509.NewCertPool()
 }

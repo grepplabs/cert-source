@@ -97,6 +97,7 @@ func TestKeyEncryption(t *testing.T) {
 		WithClientCert(bundle.ClientCert.Name(), bundle.ClientKeyEncrypted.Name()),
 		WithKeyPassword(bundle.ClientKeyPassword),
 		WithRefresh(1*time.Second),
+		WithSystemPool(true),
 	).(*fileSource)
 
 	clientCertsStore, err := tlsclient.NewTLSClientCertsStore(slog.Default(), clientSource)

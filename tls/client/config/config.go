@@ -20,6 +20,7 @@ func GetTLSClientConfigFunc(logger *slog.Logger, conf *config.TLSClientConfig, o
 		filesource.WithClientCert(conf.File.Cert, conf.File.Key),
 		filesource.WithClientRootCAs(conf.File.RootCAs),
 		filesource.WithKeyPassword(conf.KeyPassword),
+		filesource.WithSystemPool(conf.UseSystemPool),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("setup client cert file source: %w", err)

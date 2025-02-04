@@ -18,6 +18,7 @@ type fileSource struct {
 	keyFile            string
 	keyPassword        string
 	rootCAsFile        string
+	useSystemPool      bool
 	refresh            time.Duration
 	logger             *slog.Logger
 	notifyFunc         func()
@@ -95,8 +96,9 @@ func (s *fileSource) ClientCerts() chan tlscert.ClientCerts {
 }
 
 func (s *fileSource) Load() (pemBlocks *tlscert.ClientPEMs, err error) {
-	pemBlocks = &tlscert.ClientPEMs{}
-
+	pemBlocks = &tlscert.ClientPEMs{
+		UseSystemPool: s.useSystemPool,
+	}
 	if (s.certFile == "") != (s.keyFile == "") {
 		return nil, errors.New("cert file source: both certFile and keyFile must be set or be empty")
 	}

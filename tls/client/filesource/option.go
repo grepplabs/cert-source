@@ -49,3 +49,9 @@ func WithNotifyFunc(notifyFunc func()) Option {
 		c.notifyFunc = notifyFunc
 	}
 }
+
+func WithSystemPool(useSystemPool bool) Option {
+	return func(c *fileSource) {
+		c.useSystemPool = useSystemPool
+	}
+}

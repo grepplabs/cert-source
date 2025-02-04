@@ -65,6 +65,17 @@ func TestServerConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "Client trusted CA added to system pool",
+			transportFunc: func() http.RoundTripper {
+				return tlsclient.NewDefaultRoundTripper(tlsclient.WithSystemRootCA(bundle.CAX509Cert))
+			},
+			configFunc: func() *tls.Config {
+				return servertls.MustNewServerConfig(logger, MustNew(
+					WithX509KeyPair(bundle.ServerCert.Name(), bundle.ServerKey.Name()),
+				))
+			},
+		},
+		{
 			name: "Client without required certificate",
 			transportFunc: func() http.RoundTripper {
 				return tlsclient.NewDefaultRoundTripper(tlsclient.WithRootCA(bundle.CAX509Cert))

@@ -24,6 +24,7 @@ type TLSClientConfig struct {
 	InsecureSkipVerify bool           `help:"Skip TLS verification on client side."`
 	File               TLSClientFiles `embed:"" prefix:"file."`
 	KeyPassword        string         `help:"Optional password to decrypt RSA private key."`
+	UseSystemPool      bool           `help:"Use system pool for root CAs."`
 }
 
 type TLSClientFiles struct {
