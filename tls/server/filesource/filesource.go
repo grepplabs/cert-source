@@ -114,7 +114,7 @@ func (s *fileSource) ServerCerts() chan tlscert.ServerCerts {
 	return ch
 }
 
-func (s *fileSource) Load() (pemBlocks *tlscert.ServerPEMs, err error) {
+func (s *fileSource) Load() (*tlscert.ServerPEMs, error) {
 	if s.certFile == "" {
 		return nil, errors.New("cert file source: certFile is required")
 	}
@@ -124,7 +124,8 @@ func (s *fileSource) Load() (pemBlocks *tlscert.ServerPEMs, err error) {
 	if s.clientAuthFile == "" && s.clientCRLFile != "" {
 		return nil, errors.New("cert file source: clientAuthFile is required when clientCRLFile is provided")
 	}
-	pemBlocks = &tlscert.ServerPEMs{}
+	pemBlocks := &tlscert.ServerPEMs{}
+	var err error
 	if pemBlocks.CertPEMBlock, err = s.readFile(s.certFile); err != nil {
 		return nil, err
 	}
@@ -147,5 +148,6 @@ func (s *fileSource) readFile(name string) ([]byte, error) {
 	if name == "" {
 		return nil, nil
 	}
+	// nolint:gosec
 	return os.ReadFile(name)
 }

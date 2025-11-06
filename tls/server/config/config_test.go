@@ -33,7 +33,7 @@ func TestGetServerTLSConfig(t *testing.T) {
 	require.NoError(t, err)
 	// not system pool
 	require.False(t, tlsConfig.ClientCAs.Equal(systemPool))
-	require.Equal(t, tlsConfig.ClientAuth, tls.RequireAndVerifyClientCert)
+	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.NotEmpty(t, tlsConfig.Certificates)
 	// clientCRL verification
 	require.NotNil(t, tlsConfig.VerifyPeerCertificate)
@@ -54,17 +54,19 @@ func TestGetServerTLSOptionsConfig(t *testing.T) {
 			Cert: bundle.ServerCert.Name(),
 		},
 	}, tlsserver.WithTLSServerNextProtos([]string{"h2"}),
+		tlsserver.WithTLSServerMinVersion(tls.VersionTLS13),
 		tlsserver.WithTLSServerCipherSuites([]uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}),
 		tlsserver.WithTLSServerCurvePreferences([]tls.CurveID{tls.CurveP256, tls.CurveP384}),
 	)
 	require.NoError(t, err)
 	require.Nil(t, tlsConfig.ClientCAs)
-	require.Equal(t, tlsConfig.ClientAuth, tls.NoClientCert)
+	require.Equal(t, tls.NoClientCert, tlsConfig.ClientAuth)
 	require.NotEmpty(t, tlsConfig.Certificates)
 	require.Nil(t, tlsConfig.VerifyPeerCertificate)
-	require.Equal(t, tlsConfig.NextProtos, []string{"h2"})
-	require.Equal(t, tlsConfig.CipherSuites, []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256})
-	require.Equal(t, tlsConfig.CurvePreferences, []tls.CurveID{tls.CurveP256, tls.CurveP384})
+	require.Equal(t, []string{"h2"}, tlsConfig.NextProtos)
+	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
+	require.Equal(t, []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}, tlsConfig.CipherSuites)
+	require.Equal(t, []tls.CurveID{tls.CurveP256, tls.CurveP384}, tlsConfig.CurvePreferences)
 }
 
 func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
@@ -190,7 +192,6 @@ func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
 			opts := make([]tlsserver.TLSServerConfigOption, 0, len(tc.verifyFuncs))
 			for _, f := range tc.verifyFuncs {
 				opts = append(opts, tlsserver.WithTLSServerVerifyPeerCertificate(f))

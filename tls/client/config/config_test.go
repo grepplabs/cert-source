@@ -25,7 +25,7 @@ func TestGetClientTLSConfig(t *testing.T) {
 	require.NoError(t, err)
 	tlsConfig := tlsConfigFunc()
 	require.NotNil(t, tlsConfig.RootCAs)
-	require.Equal(t, tlsConfig.NextProtos, []string{"h2"})
+	require.Equal(t, []string{"h2"}, tlsConfig.NextProtos)
 
 	clientCert, err := tlsConfig.GetClientCertificate(nil)
 	require.NoError(t, err)

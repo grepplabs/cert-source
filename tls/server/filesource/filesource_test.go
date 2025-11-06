@@ -3,6 +3,7 @@ package filesource
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -150,7 +151,7 @@ func TestServerConfig(t *testing.T) {
 			// then
 			if tc.requestError {
 				t.Log(err)
-				require.NotNil(t, err)
+				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
@@ -160,8 +161,7 @@ func TestServerConfig(t *testing.T) {
 
 			_ = res.Body.Close()
 			require.NoError(t, err)
-			require.Equal(t, res.StatusCode, http.StatusOK)
-
+			require.Equal(t, http.StatusOK, res.StatusCode)
 		})
 	}
 }
@@ -197,8 +197,9 @@ func TestCertRotation(t *testing.T) {
 	require.NoError(t, err)
 
 	// when
-	_, err = bundle1.NewHttpClient().Do(req)
+	resp, err := bundle1.NewHttpClient().Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 
 	// copy new certificates to be used by server
 	require.NoError(t, os.Rename(bundle2.ServerCert.Name(), bundle1.ServerCert.Name()))
@@ -214,12 +215,19 @@ func TestCertRotation(t *testing.T) {
 		t.Fatal("expected certificate change notification")
 	}
 	// old client - bad certificate
+	// nolint:bodyclose
 	_, err = bundle1.NewHttpClient().Do(req)
-	require.NotNil(t, err)
+	require.Error(t, err)
+
 	var unknownAuthorityError x509.UnknownAuthorityError
-	require.ErrorAs(t, err.(*url.Error).Err, &unknownAuthorityError)
+	require.ErrorAs(t, func() *url.Error {
+		target := &url.Error{}
+		_ = errors.As(err, &target)
+		return target
+	}().Err, &unknownAuthorityError)
 
 	// new client - success
-	_, err = bundle2.NewHttpClient().Do(req)
+	resp, err = bundle2.NewHttpClient().Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 }

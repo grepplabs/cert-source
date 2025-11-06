@@ -28,7 +28,8 @@ func DecryptPrivateKeyPEM(pemData []byte, password string) ([]byte, error) {
 			Bytes: key,
 		}
 		return pem.EncodeToMemory(block), nil
-	} else if strings.Contains(string(pemData), "ENCRYPTED PRIVATE KEY") {
+	}
+	if strings.Contains(string(pemData), "ENCRYPTED PRIVATE KEY") {
 		if password == "" {
 			return nil, errors.New("PEM is encrypted, but password is empty")
 		}
@@ -41,6 +42,7 @@ func DecryptPrivateKeyPEM(pemData []byte, password string) ([]byte, error) {
 	return pemData, nil
 }
 
+// nolint:cyclop
 func EncryptPKCS8PrivateKeyPEM(pemData []byte, password string) ([]byte, error) {
 	if password == "" {
 		return nil, errors.New("password cannot be empty")
@@ -70,6 +72,7 @@ func EncryptPKCS8PrivateKeyPEM(pemData []byte, password string) ([]byte, error) 
 			return nil, err
 		}
 		// Parse back to interface{} to match the signature for pkcs8.MarshalPrivateKey
+		// nolint:forcetypeassert
 		key, err = x509.ParsePKCS8PrivateKey(key.([]byte))
 		if err != nil {
 			return nil, err

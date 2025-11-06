@@ -31,6 +31,7 @@ func NewServerConfig(logger *slog.Logger, src source.ServerCertsSource, opts ...
 	if err != nil {
 		return nil, err
 	}
+	// nolint:gosec // G402: TLS MinVersion too low - MinVersion can be changes with WithTLSServerMinVersion option
 	tlsConfig := tls.Config{
 		GetConfigForClient: func(info *tls.ClientHelloInfo) (*tls.Config, error) {
 			cs := store.LoadServerCerts()

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -58,8 +59,9 @@ func TestCertRotation(t *testing.T) {
 	client := &http.Client{
 		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientCertsStore(clientCertsStore)),
 	}
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 
 	require.NoError(t, os.Rename(bundle2.ClientCert.Name(), bundle1.ClientCert.Name()))
 	require.NoError(t, os.Rename(bundle2.ClientKey.Name(), bundle1.ClientKey.Name()))
@@ -77,10 +79,14 @@ func TestCertRotation(t *testing.T) {
 	client = &http.Client{
 		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientCertsStore(clientCertsStore)),
 	}
+	// nolint:bodyclose
 	_, err = client.Do(req)
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "unknown certificate authority")
+	require.Error(t, err)
 
+	msg := err.Error()
+	ok := strings.Contains(msg, "unknown certificate authority") ||
+		strings.Contains(msg, `possibly because of "crypto/rsa: verification error" while trying to verify candidate authority certificate "ca-cert"`)
+	require.Truef(t, ok, "unexpected error: %q", msg)
 }
 
 func TestKeyEncryption(t *testing.T) {
@@ -120,7 +126,7 @@ func TestKeyEncryption(t *testing.T) {
 	client := &http.Client{
 		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientCertsStore(clientCertsStore)),
 	}
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	require.NoError(t, err)
-
+	defer resp.Body.Close()
 }

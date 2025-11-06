@@ -24,6 +24,7 @@ func WithClientCertsStore(source *source.ClientCertsStore) RoundTripperOption {
 	return func(rt *RoundTripper) {
 		cs := source.LoadClientCerts()
 		if rt.transport.TLSClientConfig == nil {
+			// nolint:gosec
 			rt.transport.TLSClientConfig = &tls.Config{}
 		}
 		rt.transport.TLSClientConfig.RootCAs = cs.RootCAs
@@ -52,6 +53,7 @@ func WithRootCA(cert *x509.Certificate) RoundTripperOption {
 func WithRootCAs(rootCAs *x509.CertPool) RoundTripperOption {
 	return func(rt *RoundTripper) {
 		if rt.transport.TLSClientConfig == nil {
+			// nolint:gosec
 			rt.transport.TLSClientConfig = &tls.Config{}
 		}
 		rt.transport.TLSClientConfig.RootCAs = rootCAs
@@ -61,6 +63,7 @@ func WithRootCAs(rootCAs *x509.CertPool) RoundTripperOption {
 func WithClientTLSSkipVerify(skipVerify bool) RoundTripperOption {
 	return func(rt *RoundTripper) {
 		if rt.transport.TLSClientConfig == nil {
+			// nolint:gosec
 			rt.transport.TLSClientConfig = &tls.Config{}
 		}
 		rt.transport.TLSClientConfig.InsecureSkipVerify = skipVerify
@@ -70,6 +73,7 @@ func WithClientTLSSkipVerify(skipVerify bool) RoundTripperOption {
 func WithClientCertificate(clientCert *tls.Certificate) RoundTripperOption {
 	return func(rt *RoundTripper) {
 		if rt.transport.TLSClientConfig == nil {
+			// nolint:gosec
 			rt.transport.TLSClientConfig = &tls.Config{}
 		}
 		rt.transport.TLSClientConfig.GetClientCertificate = func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
@@ -81,6 +85,7 @@ func WithClientCertificate(clientCert *tls.Certificate) RoundTripperOption {
 func WithClientNextProtos(nextProto []string) RoundTripperOption {
 	return func(rt *RoundTripper) {
 		if rt.transport.TLSClientConfig == nil {
+			// nolint:gosec
 			rt.transport.TLSClientConfig = &tls.Config{}
 		}
 		rt.transport.TLSClientConfig.NextProtos = nextProto
@@ -98,6 +103,7 @@ func NewRoundTripper(transport *http.Transport, options ...RoundTripperOption) *
 }
 
 func NewDefaultRoundTripper(options ...RoundTripperOption) *RoundTripper {
+	// nolint:forcetypeassert
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	return NewRoundTripper(transport, options...)
 }

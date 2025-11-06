@@ -66,13 +66,13 @@ func (s *ServerCertsStore) SetServerCerts(certs ServerCerts) {
 }
 
 func names(certs []tls.Certificate) []string {
-	var result []string
+	result := make([]string, 0, len(certs))
 	for _, c := range certs {
 		x509Cert, err := x509.ParseCertificate(c.Certificate[0])
 		if err != nil {
 			continue
 		}
-		var names []string
+		names := make([]string, 0, len(x509Cert.DNSNames)+len(x509Cert.IPAddresses)+1)
 		if len(x509Cert.Subject.CommonName) > 0 {
 			names = append(names, x509Cert.Subject.CommonName)
 		}

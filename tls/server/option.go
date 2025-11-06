@@ -12,6 +12,11 @@ func WithTLSServerNextProtos(nextProto []string) TLSServerConfigOption {
 		c.NextProtos = nextProto
 	}
 }
+func WithTLSServerMinVersion(minVersion uint16) TLSServerConfigOption {
+	return func(c *tls.Config) {
+		c.MinVersion = minVersion
+	}
+}
 
 func WithTLSServerCurvePreferences(curvePreferences []tls.CurveID) TLSServerConfigOption {
 	return func(c *tls.Config) {

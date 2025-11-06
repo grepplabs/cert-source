@@ -95,13 +95,12 @@ func (s *fileSource) ClientCerts() chan tlscert.ClientCerts {
 	return ch
 }
 
-func (s *fileSource) Load() (pemBlocks *tlscert.ClientPEMs, err error) {
-	pemBlocks = &tlscert.ClientPEMs{
-		UseSystemPool: s.useSystemPool,
-	}
+func (s *fileSource) Load() (*tlscert.ClientPEMs, error) {
+	pemBlocks := &tlscert.ClientPEMs{UseSystemPool: s.useSystemPool}
 	if (s.certFile == "") != (s.keyFile == "") {
 		return nil, errors.New("cert file source: both certFile and keyFile must be set or be empty")
 	}
+	var err error
 	if s.certFile != "" && s.keyFile != "" {
 		if pemBlocks.CertPEMBlock, err = s.readFile(s.certFile); err != nil {
 			return nil, err
@@ -123,5 +122,6 @@ func (s *fileSource) readFile(name string) ([]byte, error) {
 	if name == "" {
 		return nil, nil
 	}
+	//nolint:gosec
 	return os.ReadFile(name)
 }

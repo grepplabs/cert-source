@@ -193,11 +193,11 @@ jOlh0aHv8csftxxnjI8lwu/BjMRdTWY8YeiXHVYzdfNDRvAPYuuZMQ==
 
 	for _, data := range testData {
 		decryptedKey, err := DecryptPrivateKeyPEM([]byte(data.pemDataEncrypted), data.password)
-		a.Nil(err)
+		require.NoError(t, err)
 		a.EqualValues(decryptedKey, data.pemData)
 
 		sameKey, err := DecryptPrivateKeyPEM([]byte(data.pemData), data.password)
-		a.Nil(err)
+		require.NoError(t, err)
 		a.EqualValues(sameKey, data.pemData)
 	}
 }
@@ -218,7 +218,6 @@ func TestEncryptPKCS8PrivateKeyPEM(t *testing.T) {
 }
 
 func TestDecryptOpenSSLPrivateKeyPEM(t *testing.T) {
-
 	password := "test123"
 	pemData := `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDLjyjORo37J5bp

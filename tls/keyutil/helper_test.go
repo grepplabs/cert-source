@@ -26,7 +26,6 @@ func TestGenerateKeys(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
 			privKey, privPem, pubKey, pubPem, err := tc.genKeysFunc()
 			require.NoError(t, err)
 			require.True(t, KeysMatch(privKey, pubKey))
@@ -75,9 +74,7 @@ func TestReadKeys(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
-			dirName, err := os.MkdirTemp("", "key-test-")
-			require.NoError(t, err)
+			dirName := t.TempDir()
 			privFile, err := os.CreateTemp(dirName, "private-key-")
 			require.NoError(t, err)
 			defer func() {
@@ -107,7 +104,6 @@ func TestReadKeys(t *testing.T) {
 			pubKey, err := ReadPublicKeyFile(pubFile.Name())
 			require.NoError(t, err)
 			require.True(t, KeysMatch(privKey, pubKey))
-
 		})
 	}
 }

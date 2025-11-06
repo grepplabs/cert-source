@@ -73,7 +73,6 @@ func GenerateCert(caCert *tls.Certificate, client bool, certFile *os.File, keyFi
 			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 			KeyUsage:    x509.KeyUsageDigitalSignature,
 		}
-
 	} else {
 		certificate = &x509.Certificate{
 			SerialNumber: big.NewInt(mathrand.Int63()),
@@ -334,6 +333,7 @@ func NewCertsBundle() *CertsBundle {
 }
 
 func writeEncryptedPrivate(keyFilename string, encryptedFile *os.File, password string) {
+	// nolint:gosec
 	keyData, err := os.ReadFile(keyFilename)
 	if err != nil {
 		panic(err)

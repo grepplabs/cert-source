@@ -112,7 +112,7 @@ func KeysMatch(priv crypto.PrivateKey, pub crypto.PublicKey) bool {
 		return false
 	}
 	pubKey, ok := privKey.Public().(interface {
-		Equal(crypto.PublicKey) bool
+		Equal(publicKey crypto.PublicKey) bool
 	})
 	if !ok {
 		return false
@@ -155,7 +155,7 @@ func ParsePrivateKeyPEM(keyData []byte) (crypto.PrivateKey, error) {
 			}
 		}
 	}
-	return nil, fmt.Errorf("data does not contain a valid RSA or ECDSA private key")
+	return nil, errors.New("data does not contain a valid RSA or ECDSA private key")
 }
 
 func ParsePublicKeysPEM(keyData []byte) ([]crypto.PublicKey, error) {
@@ -185,7 +185,7 @@ func ParsePublicKeysPEM(keyData []byte) ([]crypto.PublicKey, error) {
 	}
 
 	if len(keys) == 0 {
-		return nil, fmt.Errorf("data does not contain any valid RSA or ECDSA public keys")
+		return nil, errors.New("data does not contain any valid RSA or ECDSA public keys")
 	}
 	return keys, nil
 }
@@ -249,19 +249,20 @@ func ReadPrivateKey(r io.Reader) (crypto.PrivateKey, error) {
 	}
 	key, err := ParsePrivateKeyPEM(data)
 	if err != nil {
-		return nil, fmt.Errorf("error reading private key: %v", err)
+		return nil, fmt.Errorf("error reading private key: %w", err)
 	}
 	return key, nil
 }
 
 func ReadPrivateKeyFile(filename string) (crypto.PrivateKey, error) {
+	// nolint:gosec
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 	key, err := ParsePrivateKeyPEM(data)
 	if err != nil {
-		return nil, fmt.Errorf("error reading private key: %v", err)
+		return nil, fmt.Errorf("error reading private key: %w", err)
 	}
 	return key, nil
 }
@@ -273,19 +274,20 @@ func ReadPublicKeys(r io.Reader) ([]crypto.PublicKey, error) {
 	}
 	keys, err := ParsePublicKeysPEM(data)
 	if err != nil {
-		return nil, fmt.Errorf("error reading public key: %v", err)
+		return nil, fmt.Errorf("error reading public key: %w", err)
 	}
 	return keys, nil
 }
 
 func ReadPublicKeyFile(filename string) (crypto.PublicKey, error) {
+	// nolint:gosec
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 	keys, err := ParsePublicKeysPEM(data)
 	if err != nil {
-		return nil, fmt.Errorf("error reading public key: %v", err)
+		return nil, fmt.Errorf("error reading public key: %w", err)
 	}
 	return keys[0], nil
 }
@@ -303,7 +305,7 @@ func parseRSAPublicKey(data []byte) (*rsa.PublicKey, error) {
 	var pubKey *rsa.PublicKey
 	var ok bool
 	if pubKey, ok = parsedKey.(*rsa.PublicKey); !ok {
-		return nil, fmt.Errorf("data doesn't contain valid RSA Public Key")
+		return nil, errors.New("data doesn't contain valid RSA Public Key")
 	}
 
 	return pubKey, nil
@@ -320,7 +322,7 @@ func parseRSAPrivateKey(data []byte) (*rsa.PrivateKey, error) {
 	var privKey *rsa.PrivateKey
 	var ok bool
 	if privKey, ok = parsedKey.(*rsa.PrivateKey); !ok {
-		return nil, fmt.Errorf("data doesn't contain valid RSA Private Key")
+		return nil, errors.New("data doesn't contain valid RSA Private Key")
 	}
 
 	return privKey, nil
@@ -341,7 +343,7 @@ func parseECPublicKey(data []byte) (*ecdsa.PublicKey, error) {
 	var pubKey *ecdsa.PublicKey
 	var ok bool
 	if pubKey, ok = parsedKey.(*ecdsa.PublicKey); !ok {
-		return nil, fmt.Errorf("data doesn't contain valid ECDSA Public Key")
+		return nil, errors.New("data doesn't contain valid ECDSA Public Key")
 	}
 
 	return pubKey, nil
@@ -358,7 +360,7 @@ func parseECPrivateKey(data []byte) (*ecdsa.PrivateKey, error) {
 	var privKey *ecdsa.PrivateKey
 	var ok bool
 	if privKey, ok = parsedKey.(*ecdsa.PrivateKey); !ok {
-		return nil, fmt.Errorf("data doesn't contain valid ECDSA Private Key")
+		return nil, errors.New("data doesn't contain valid ECDSA Private Key")
 	}
 
 	return privKey, nil
