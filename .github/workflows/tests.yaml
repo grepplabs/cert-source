@@ -35,7 +35,7 @@ jobs:
       - name: Test
         run: go test -count=1 -v ./...
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v8
         with:
           version: v1.56.2
           skip-pkg-cache: true
