@@ -13,7 +13,7 @@ import (
 func TestGetClientTLSConfig(t *testing.T) {
 	bundle := testutil.NewCertsBundle()
 	defer bundle.Close()
-	tlsConfigFunc, err := GetTLSClientConfigFunc(slog.Default(), &config.TLSClientConfig{
+	tlsConfig, err := GetTLSClientConfig(slog.Default(), &config.TLSClientConfig{
 		Enable:  true,
 		Refresh: 0,
 		File: config.TLSClientFiles{
@@ -21,11 +21,12 @@ func TestGetClientTLSConfig(t *testing.T) {
 			Cert:    bundle.ClientCert.Name(),
 			RootCAs: bundle.CACert.Name(),
 		},
-	}, tlsclient.WithTLSClientNextProtos([]string{"h2"}))
+	}, tlsclient.WithTLSClientHTTP2(), tlsclient.WithTLSServerName("localhost"))
 	require.NoError(t, err)
-	tlsConfig := tlsConfigFunc()
-	require.NotNil(t, tlsConfig.RootCAs)
+	require.True(t, tlsConfig.InsecureSkipVerify)
+	require.NotNil(t, tlsConfig.VerifyConnection)
 	require.Equal(t, []string{"h2"}, tlsConfig.NextProtos)
+	require.Equal(t, "localhost", tlsConfig.ServerName)
 
 	clientCert, err := tlsConfig.GetClientCertificate(nil)
 	require.NoError(t, err)
@@ -35,33 +36,49 @@ func TestGetClientTLSConfig(t *testing.T) {
 func TestGetClientTLSConfigNoConfig(t *testing.T) {
 	bundle := testutil.NewCertsBundle()
 	defer bundle.Close()
-	tlsConfigFunc, err := GetTLSClientConfigFunc(slog.Default(), &config.TLSClientConfig{
+	tlsConfig, err := GetTLSClientConfig(slog.Default(), &config.TLSClientConfig{
 		Enable:  true,
 		Refresh: 0,
 		File:    config.TLSClientFiles{},
 	})
 	require.NoError(t, err)
-	tlsConfig := tlsConfigFunc()
-	require.Nil(t, tlsConfig.RootCAs)
+	require.True(t, tlsConfig.InsecureSkipVerify)
 	require.Nil(t, tlsConfig.GetClientCertificate)
 }
 
 func TestGetClientTLSConfigSkipVerify(t *testing.T) {
 	bundle := testutil.NewCertsBundle()
 	defer bundle.Close()
-	tlsConfigFunc, err := GetTLSClientConfigFunc(slog.Default(), &config.TLSClientConfig{
-		Enable:  true,
-		Refresh: 0,
+	tlsConfig, err := GetTLSClientConfig(slog.Default(), &config.TLSClientConfig{
+		Enable:             true,
+		Refresh:            0,
+		InsecureSkipVerify: true,
 		File: config.TLSClientFiles{
 			Key:  bundle.ClientKey.Name(),
 			Cert: bundle.ClientCert.Name(),
 		},
 	})
 	require.NoError(t, err)
-	tlsConfig := tlsConfigFunc()
-	require.Nil(t, tlsConfig.RootCAs)
+	require.True(t, tlsConfig.InsecureSkipVerify)
 
 	clientCert, err := tlsConfig.GetClientCertificate(nil)
 	require.NoError(t, err)
 	require.NotNil(t, clientCert)
+}
+
+func TestGetClientTLSHTTP2AndHTTP11Config(t *testing.T) {
+	bundle := testutil.NewCertsBundle()
+	defer bundle.Close()
+
+	tlsConfig, err := GetTLSClientConfig(slog.Default(), &config.TLSClientConfig{
+		Enable:  true,
+		Refresh: 0,
+		File: config.TLSClientFiles{
+			Key:     bundle.ClientKey.Name(),
+			Cert:    bundle.ClientCert.Name(),
+			RootCAs: bundle.CACert.Name(),
+		},
+	}, tlsclient.WithTLSClientHTTP2AndHTTP11())
+	require.NoError(t, err)
+	require.Equal(t, []string{"h2", "http/1.1"}, tlsConfig.NextProtos)
 }

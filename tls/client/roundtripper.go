@@ -4,8 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
-
-	"github.com/grepplabs/cert-source/tls/client/source"
 )
 
 type RoundTripper struct {
@@ -17,21 +15,6 @@ type RoundTripperOption func(*RoundTripper)
 func WithClientTLSConfig(tlsClientConfig *tls.Config) RoundTripperOption {
 	return func(rt *RoundTripper) {
 		rt.transport.TLSClientConfig = tlsClientConfig
-	}
-}
-
-func WithClientCertsStore(source *source.ClientCertsStore) RoundTripperOption {
-	return func(rt *RoundTripper) {
-		cs := source.LoadClientCerts()
-		if rt.transport.TLSClientConfig == nil {
-			// nolint:gosec
-			rt.transport.TLSClientConfig = &tls.Config{}
-		}
-		rt.transport.TLSClientConfig.RootCAs = cs.RootCAs
-		rt.transport.TLSClientConfig.InsecureSkipVerify = cs.InsecureSkipVerify
-		rt.transport.TLSClientConfig.GetClientCertificate = func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-			return source.LoadClientCerts().Certificate, nil
-		}
 	}
 }
 

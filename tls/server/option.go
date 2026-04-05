@@ -7,11 +7,25 @@ import (
 
 type TLSServerConfigOption func(*tls.Config)
 
+var (
+	http2OnlyNextProtos      = []string{"h2"}
+	http2AndHTTP11NextProtos = []string{"h2", "http/1.1"}
+)
+
 func WithTLSServerNextProtos(nextProto []string) TLSServerConfigOption {
 	return func(c *tls.Config) {
 		c.NextProtos = nextProto
 	}
 }
+
+func WithTLSServerHTTP2() TLSServerConfigOption {
+	return WithTLSServerNextProtos(http2OnlyNextProtos)
+}
+
+func WithTLSServerHTTP2AndHTTP11() TLSServerConfigOption {
+	return WithTLSServerNextProtos(http2AndHTTP11NextProtos)
+}
+
 func WithTLSServerMinVersion(minVersion uint16) TLSServerConfigOption {
 	return func(c *tls.Config) {
 		c.MinVersion = minVersion

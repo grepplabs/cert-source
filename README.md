@@ -79,7 +79,7 @@ import (
 )
 
 func main() {
-	tlsClientConfigFunc, err := tlsclientconfig.GetTLSClientConfigFunc(slog.Default(), &tlsconfig.TLSClientConfig{
+	tlsClientConfig, err := tlsclientconfig.GetTLSClientConfig(slog.Default(), &tlsconfig.TLSClientConfig{
 		Enable:             true,
 		Refresh:            1 * time.Second,
 		InsecureSkipVerify: false,
@@ -92,7 +92,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	transport := tlsclient.NewDefaultRoundTripper(tlsclient.WithClientTLSConfig(tlsClientConfigFunc()))
+	transport := tlsclient.NewDefaultRoundTripper(tlsclient.WithClientTLSConfig(tlsClientConfig))
 	client := &http.Client{Transport: transport}
 	resp, err := client.Get("https://localhost:8443")
 	if err != nil {
