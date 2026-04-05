@@ -53,7 +53,7 @@ func TestGetServerTLSOptionsConfig(t *testing.T) {
 			Key:  bundle.ServerKey.Name(),
 			Cert: bundle.ServerCert.Name(),
 		},
-	}, tlsserver.WithTLSServerNextProtos([]string{"h2"}),
+	}, tlsserver.WithTLSServerHTTP2(),
 		tlsserver.WithTLSServerMinVersion(tls.VersionTLS13),
 		tlsserver.WithTLSServerCipherSuites([]uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}),
 		tlsserver.WithTLSServerCurvePreferences([]tls.CurveID{tls.CurveP256, tls.CurveP384}),
@@ -67,6 +67,22 @@ func TestGetServerTLSOptionsConfig(t *testing.T) {
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
 	require.Equal(t, []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}, tlsConfig.CipherSuites)
 	require.Equal(t, []tls.CurveID{tls.CurveP256, tls.CurveP384}, tlsConfig.CurvePreferences)
+}
+
+func TestGetServerTLSHTTP2AndHTTP11OptionsConfig(t *testing.T) {
+	bundle := testutil.NewCertsBundle()
+	defer bundle.Close()
+
+	tlsConfig, err := GetServerTLSConfig(slog.Default(), &config.TLSServerConfig{
+		Enable:  true,
+		Refresh: 0,
+		File: config.TLSServerFiles{
+			Key:  bundle.ServerKey.Name(),
+			Cert: bundle.ServerCert.Name(),
+		},
+	}, tlsserver.WithTLSServerHTTP2AndHTTP11())
+	require.NoError(t, err)
+	require.Equal(t, []string{"h2", "http/1.1"}, tlsConfig.NextProtos)
 }
 
 func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {

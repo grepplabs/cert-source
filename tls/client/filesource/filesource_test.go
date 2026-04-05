@@ -39,7 +39,7 @@ func TestCertRotation(t *testing.T) {
 		WithNotifyFunc(notifyFunc),
 	).(*fileSource)
 
-	clientCertsStore, err := tlsclient.NewTLSClientCertsStore(slog.Default(), clientSource)
+	tlsConfig, err := tlsclient.NewTLSConfig(slog.Default(), clientSource)
 	require.NoError(t, err)
 
 	serverSource := serverfilesource.MustNew(
@@ -57,7 +57,7 @@ func TestCertRotation(t *testing.T) {
 
 	// when
 	client := &http.Client{
-		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientCertsStore(clientCertsStore)),
+		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientTLSConfig(tlsConfig)),
 	}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestCertRotation(t *testing.T) {
 	// old client - bad certificate
 	// create new client as connection can be kept alive
 	client = &http.Client{
-		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientCertsStore(clientCertsStore)),
+		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientTLSConfig(tlsConfig)),
 	}
 	// nolint:bodyclose
 	_, err = client.Do(req)
@@ -106,7 +106,7 @@ func TestKeyEncryption(t *testing.T) {
 		WithSystemPool(true),
 	).(*fileSource)
 
-	clientCertsStore, err := tlsclient.NewTLSClientCertsStore(slog.Default(), clientSource)
+	tlsConfig, err := tlsclient.NewTLSConfig(slog.Default(), clientSource)
 	require.NoError(t, err)
 
 	serverSource := serverfilesource.MustNew(
@@ -124,9 +124,75 @@ func TestKeyEncryption(t *testing.T) {
 
 	// when
 	client := &http.Client{
-		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientCertsStore(clientCertsStore)),
+		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientTLSConfig(tlsConfig)),
 	}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
+}
+
+func TestTLSConfigRotatesRootCAs(t *testing.T) {
+	bundle1 := testutil.NewCertsBundle()
+	defer bundle1.Close()
+
+	bundle2 := testutil.NewCertsBundle()
+	defer bundle2.Close()
+
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	rotatedCh := make(chan struct{}, 1)
+	notifyFunc := func() {
+		rotatedCh <- struct{}{}
+	}
+	clientSource := MustNew(
+		WithClientRootCAs(bundle1.CACert.Name()),
+		WithClientCert(bundle1.ClientCert.Name(), bundle1.ClientKey.Name()),
+		WithRefresh(1*time.Second),
+		WithNotifyFunc(notifyFunc),
+	)
+
+	serverSource := serverfilesource.MustNew(
+		serverfilesource.WithX509KeyPair(bundle1.ServerCert.Name(), bundle1.ServerKey.Name()),
+		serverfilesource.WithClientAuthFile(bundle1.CACert.Name()),
+		serverfilesource.WithClientCRLFile(bundle1.CAEmptyCRL.Name()),
+		serverfilesource.WithRefresh(1*time.Second),
+	)
+	ts.TLS = servertls.MustNewServerConfig(slog.Default(), serverSource)
+	ts.StartTLS()
+
+	tlsConfig, err := tlsclient.NewTLSConfig(slog.Default(), clientSource)
+	require.NoError(t, err)
+
+	client := &http.Client{
+		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientTLSConfig(tlsConfig)),
+	}
+	resp, err := client.Get(ts.URL)
+	require.NoError(t, err)
+	resp.Body.Close()
+
+	require.NoError(t, os.Rename(bundle2.CACert.Name(), bundle1.CACert.Name()))
+
+	select {
+	case <-rotatedCh:
+		time.Sleep(100 * time.Millisecond)
+	case <-time.After(3 * time.Second):
+		t.Fatal("expected certificate change notification")
+	}
+
+	client = &http.Client{
+		Transport: tlsclient.NewDefaultRoundTripper(tlsclient.WithClientTLSConfig(tlsConfig)),
+	}
+	resp, err = client.Get(ts.URL)
+	if resp != nil {
+		resp.Body.Close()
+	}
+	require.Error(t, err)
+
+	msg := err.Error()
+	ok := strings.Contains(msg, "certificate signed by unknown authority") ||
+		strings.Contains(msg, "unknown certificate authority")
+	require.Truef(t, ok, "unexpected error: %q", msg)
 }
