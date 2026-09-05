@@ -2,7 +2,6 @@ package tlsserver
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -42,7 +41,7 @@ func NewServerConfig(logger *slog.Logger, src source.ServerCertsSource, opts ...
 			if cs.ClientCAs != nil {
 				x.ClientCAs = cs.ClientCAs
 				x.ClientAuth = tls.RequireAndVerifyClientCert
-				x.VerifyPeerCertificate = verifyClientCertificate(logger, store)
+				x.VerifyConnection = verifyClientConnection(logger, store)
 			}
 			for _, opt := range opts {
 				opt(x)
@@ -56,7 +55,7 @@ func NewServerConfig(logger *slog.Logger, src source.ServerCertsSource, opts ...
 	if cs.ClientCAs != nil {
 		tlsConfig.ClientCAs = cs.ClientCAs
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-		tlsConfig.VerifyPeerCertificate = verifyClientCertificate(logger, store)
+		tlsConfig.VerifyConnection = verifyClientConnection(logger, store)
 	}
 	for _, opt := range opts {
 		opt(&tlsConfig)
@@ -85,16 +84,19 @@ func NewServerCertsStore(logger *slog.Logger, src source.ServerCertsSource) (*so
 	return store, nil
 }
 
-func verifyClientCertificate(logger *slog.Logger, store *source.ServerCertsStore) func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-	return func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-		cs := store.LoadServerCerts()
-		if len(cs.ClientCRLs) == 0 {
+func verifyClientConnection(logger *slog.Logger, store *source.ServerCertsStore) func(tls.ConnectionState) error {
+	return func(state tls.ConnectionState) error {
+		certs := store.LoadServerCerts()
+		if len(certs.ClientCRLs) == 0 {
 			return nil
 		}
-		for _, chain := range verifiedChains {
+		if len(state.VerifiedChains) == 0 {
+			return errors.New("tls: no verified peer certificates")
+		}
+		for _, chain := range state.VerifiedChains {
 			for _, cert := range chain {
 				if !cert.IsCA {
-					if cs.IsClientCertRevoked(cert.SerialNumber) {
+					if certs.IsClientCertRevoked(cert.SerialNumber) {
 						err := fmt.Errorf("client certificte %s was revoked", keyutil.GetHexFormatted(cert.SerialNumber.Bytes(), ":"))
 						logger.Debug(err.Error())
 						return err
