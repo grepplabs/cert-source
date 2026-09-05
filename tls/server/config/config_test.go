@@ -36,7 +36,7 @@ func TestGetServerTLSConfig(t *testing.T) {
 	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.NotEmpty(t, tlsConfig.Certificates)
 	// clientCRL verification
-	require.NotNil(t, tlsConfig.VerifyPeerCertificate)
+	require.NotNil(t, tlsConfig.VerifyConnection)
 	require.Nil(t, tlsConfig.NextProtos)
 	require.Nil(t, tlsConfig.CipherSuites)
 	require.Nil(t, tlsConfig.CurvePreferences)
@@ -62,7 +62,7 @@ func TestGetServerTLSOptionsConfig(t *testing.T) {
 	require.Nil(t, tlsConfig.ClientCAs)
 	require.Equal(t, tls.NoClientCert, tlsConfig.ClientAuth)
 	require.NotEmpty(t, tlsConfig.Certificates)
-	require.Nil(t, tlsConfig.VerifyPeerCertificate)
+	require.Nil(t, tlsConfig.VerifyConnection)
 	require.Equal(t, []string{"h2"}, tlsConfig.NextProtos)
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
 	require.Equal(t, []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}, tlsConfig.CipherSuites)
@@ -85,14 +85,14 @@ func TestGetServerTLSHTTP2AndHTTP11OptionsConfig(t *testing.T) {
 	require.Equal(t, []string{"h2", "http/1.1"}, tlsConfig.NextProtos)
 }
 
-func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
+func TestGetServerTLSVerifyConnectionConfig(t *testing.T) {
 	bundle := testutil.NewCertsBundle()
 	defer bundle.Close()
 
 	tests := []struct {
 		name        string
 		clientCAs   string
-		verifyFuncs []tlsserver.VerifyPeerCertificateFunc
+		verifyFuncs []tlsserver.VerifyConnectionFunc
 		verifyError error
 	}{
 		{
@@ -106,8 +106,8 @@ func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
 		{
 			name:      "client CA/CLR verify success, second verify success",
 			clientCAs: bundle.CACert.Name(),
-			verifyFuncs: []tlsserver.VerifyPeerCertificateFunc{
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			verifyFuncs: []tlsserver.VerifyConnectionFunc{
+				func(cs tls.ConnectionState) error {
 					return nil
 				},
 			},
@@ -115,11 +115,11 @@ func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
 		{
 			name:      "client CA/CLR verify success, third verify success",
 			clientCAs: bundle.CACert.Name(),
-			verifyFuncs: []tlsserver.VerifyPeerCertificateFunc{
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			verifyFuncs: []tlsserver.VerifyConnectionFunc{
+				func(cs tls.ConnectionState) error {
 					return nil
 				},
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				func(cs tls.ConnectionState) error {
 					return nil
 				},
 			},
@@ -127,11 +127,11 @@ func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
 		{
 			name:      "client CA/CLR verify success, third verify failure",
 			clientCAs: bundle.CACert.Name(),
-			verifyFuncs: []tlsserver.VerifyPeerCertificateFunc{
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			verifyFuncs: []tlsserver.VerifyConnectionFunc{
+				func(cs tls.ConnectionState) error {
 					return nil
 				},
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				func(cs tls.ConnectionState) error {
 					return errors.New("3 function failed")
 				},
 			},
@@ -140,11 +140,11 @@ func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
 		{
 			name:      "client CA/CLR verify success, second verify failure",
 			clientCAs: bundle.CACert.Name(),
-			verifyFuncs: []tlsserver.VerifyPeerCertificateFunc{
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			verifyFuncs: []tlsserver.VerifyConnectionFunc{
+				func(cs tls.ConnectionState) error {
 					return errors.New("2 function failed")
 				},
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				func(cs tls.ConnectionState) error {
 					return errors.New("3 function would also fail")
 				},
 			},
@@ -152,30 +152,30 @@ func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
 		},
 		{
 			name: "first verify success",
-			verifyFuncs: []tlsserver.VerifyPeerCertificateFunc{
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			verifyFuncs: []tlsserver.VerifyConnectionFunc{
+				func(cs tls.ConnectionState) error {
 					return nil
 				},
 			},
 		},
 		{
 			name: "second verify success",
-			verifyFuncs: []tlsserver.VerifyPeerCertificateFunc{
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			verifyFuncs: []tlsserver.VerifyConnectionFunc{
+				func(cs tls.ConnectionState) error {
 					return nil
 				},
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				func(cs tls.ConnectionState) error {
 					return nil
 				},
 			},
 		},
 		{
 			name: "second verify failure",
-			verifyFuncs: []tlsserver.VerifyPeerCertificateFunc{
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			verifyFuncs: []tlsserver.VerifyConnectionFunc{
+				func(cs tls.ConnectionState) error {
 					return nil
 				},
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				func(cs tls.ConnectionState) error {
 					return errors.New("2 function failed")
 				},
 			},
@@ -183,11 +183,11 @@ func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
 		},
 		{
 			name: "first verify failure",
-			verifyFuncs: []tlsserver.VerifyPeerCertificateFunc{
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			verifyFuncs: []tlsserver.VerifyConnectionFunc{
+				func(cs tls.ConnectionState) error {
 					return errors.New("1 function failed")
 				},
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				func(cs tls.ConnectionState) error {
 					return errors.New("2 function would also fail")
 				},
 			},
@@ -195,12 +195,12 @@ func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
 		},
 		{
 			name: "unset verify function",
-			verifyFuncs: []tlsserver.VerifyPeerCertificateFunc{
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			verifyFuncs: []tlsserver.VerifyConnectionFunc{
+				func(cs tls.ConnectionState) error {
 					return errors.New("1 function failed")
 				},
 				nil, // unset chain of verify functions
-				func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				func(cs tls.ConnectionState) error {
 					return nil
 				},
 			},
@@ -210,7 +210,7 @@ func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			opts := make([]tlsserver.TLSServerConfigOption, 0, len(tc.verifyFuncs))
 			for _, f := range tc.verifyFuncs {
-				opts = append(opts, tlsserver.WithTLSServerVerifyPeerCertificate(f))
+				opts = append(opts, tlsserver.WithTLSServerVerifyConnection(f))
 			}
 			tlsConfig, err := GetServerTLSConfig(slog.Default(), &config.TLSServerConfig{
 				Enable:  true,
@@ -223,10 +223,10 @@ func TestGetServerTLSVerifyPeerCertificateConfig(t *testing.T) {
 			}, opts...)
 			require.NoError(t, err)
 			if tc.clientCAs == "" && len(tc.verifyFuncs) == 0 {
-				require.Nil(t, tlsConfig.VerifyPeerCertificate)
+				require.Nil(t, tlsConfig.VerifyConnection)
 			} else {
-				require.NotNil(t, tlsConfig.VerifyPeerCertificate)
-				err = tlsConfig.VerifyPeerCertificate(nil, nil)
+				require.NotNil(t, tlsConfig.VerifyConnection)
+				err = tlsConfig.VerifyConnection(tls.ConnectionState{VerifiedChains: [][]*x509.Certificate{{bundle.ClientX509Cert, bundle.CAX509Cert}}})
 				require.Equal(t, tc.verifyError, err)
 			}
 		})

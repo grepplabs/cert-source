@@ -2,7 +2,6 @@ package tlsserver
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 )
 
 type TLSServerConfigOption func(*tls.Config)
@@ -52,27 +51,27 @@ func WithTLSServerCipherSuites(cipherSuites []uint16) TLSServerConfigOption {
 	}
 }
 
-type VerifyPeerCertificateFunc func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error
+type VerifyConnectionFunc func(cs tls.ConnectionState) error
 
-// WithTLSServerVerifyPeerCertificate sets or chains a custom VerifyPeerCertificate function on a *tls.Config.
-// If a nil function is provided, it unsets the certificate verification function (including the standard verification).
+// WithTLSServerVerifyConnection sets or chains a custom VerifyConnection function on a *tls.Config.
+// If a nil function is provided, it unsets the certificate verification function.
 // If an existing verification function is present, the new function is chained so that it is invoked only if the existing one succeeds.
-func WithTLSServerVerifyPeerCertificate(verifyFunc VerifyPeerCertificateFunc) TLSServerConfigOption {
+func WithTLSServerVerifyConnection(verifyFunc VerifyConnectionFunc) TLSServerConfigOption {
 	return func(c *tls.Config) {
 		if verifyFunc == nil {
-			c.VerifyPeerCertificate = nil
+			c.VerifyConnection = nil
 			return
 		}
-		prevFunc := c.VerifyPeerCertificate
+		prevFunc := c.VerifyConnection
 		if prevFunc == nil {
-			c.VerifyPeerCertificate = verifyFunc
-		} else {
-			c.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-				if err := prevFunc(rawCerts, verifiedChains); err != nil {
-					return err
-				}
-				return verifyFunc(rawCerts, verifiedChains)
+			c.VerifyConnection = verifyFunc
+			return
+		}
+		c.VerifyConnection = func(cs tls.ConnectionState) error {
+			if err := prevFunc(cs); err != nil {
+				return err
 			}
+			return verifyFunc(cs)
 		}
 	}
 }
